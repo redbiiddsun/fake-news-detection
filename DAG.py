@@ -1,3 +1,7 @@
+import os
+os.system("pip install wordcloud")
+os.system("pip install mlflow")
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -148,7 +152,6 @@ with DAG(
         with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'wb') as f:
             pickle.dump((model, vectorizer), f)
 
-    
     start_task = DummyOperator(
         task_id='start'
     )
