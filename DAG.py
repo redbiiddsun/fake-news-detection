@@ -1,3 +1,7 @@
+import os
+os.system("pip install wordcloud")
+os.system("pip install mlflow")
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -148,17 +152,8 @@ with DAG(
         with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'wb') as f:
             pickle.dump((model, vectorizer), f)
 
-    def install_missing_dependencies():
-        import os
-        os.system("pip install wordcloud")
-
     start_task = DummyOperator(
         task_id='start'
-    )
-
-    install_dependencies = PythonOperator(
-        task_id='install_dependencies',
-        python_callable=install_missing_dependencies,
     )
     
     load_data_task = PythonOperator(
@@ -194,4 +189,4 @@ with DAG(
         task_id='end'
     )
     
-    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> train_logistic_regression_task >> end_task
+    start_task >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> train_logistic_regression_task >> end_task
