@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+import pickle
+import mlflow
 
 # Default DAG arguments
 default_args = {
@@ -98,6 +104,50 @@ with DAG(
         tfidf_matrix = vectorizer.fit_transform(df['text'].astype(str))
         tfidf_df = pd.DataFrame(tfidf_matrix.toarray(), columns=vectorizer.get_feature_names_out())
         tfidf_df.to_csv('/home/santitham/airflow/dags/Fake_New_Detection/tfidf_features.csv', index=False)
+        
+    def prepare_training_data():
+            
+        df = pd.read_csv('/home/santitham/airflow/dags/Fake_New_Detection/final_fake_news.csv')
+    
+        # ใช้เฉพาะข้อความจาก "text"
+        X = df['text'].astype(str)
+        y = df['label']
+
+        # แบ่งข้อมูล train/test
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # ใช้ TF-IDF Vectorizer
+        vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1,2))
+        X_train_tfidf = vectorizer.fit_transform(X_train)
+        X_test_tfidf = vectorizer.transform(X_test)
+
+        # บันทึกข้อมูล
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/train_test_data.pkl', 'wb') as f:
+            pickle.dump((X_train_tfidf, X_test_tfidf, y_train, y_test, vectorizer), f)
+
+    def train_logistic_regression():
+    # โหลด Train/Test Data
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/train_test_data.pkl', 'rb') as f:
+            X_train_tfidf, X_test_tfidf, y_train, y_test, vectorizer = pickle.load(f)
+
+        # เทรน Logistic Regression
+        model = LogisticRegression(max_iter=1000)
+        model.fit(X_train_tfidf, y_train)
+
+        # ทดสอบโมเดล
+        y_pred = model.predict(X_test_tfidf)
+        acc = accuracy_score(y_test, y_pred)
+
+        # ใช้ MLflow ติดตามผลลัพธ์
+        with mlflow.start_run():
+            mlflow.log_param("model", "Logistic Regression")
+            mlflow.log_param("max_iter", 1000)
+            mlflow.log_metric("accuracy", acc)
+
+        # บันทึกโมเดล
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'wb') as f:
+            pickle.dump((model, vectorizer), f)
+
     
     start_task = DummyOperator(
         task_id='start'
@@ -122,9 +172,18 @@ with DAG(
         task_id='eda_analysis',
         python_callable=eda_analysis,
     )
+    prepare_training_data_task = PythonOperator(
+    task_id='prepare_training_data',
+    python_callable=prepare_training_data,
+    )
+
+    train_logistic_regression_task = PythonOperator(
+        task_id='train_logistic_regression',
+        python_callable=train_logistic_regression,
+    )
     
     end_task = DummyOperator(
         task_id='end'
     )
     
-    start_task >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> end_task
+    start_task >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> train_logistic_regression_task >> end_task
