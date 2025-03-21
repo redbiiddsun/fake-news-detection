@@ -94,8 +94,8 @@ with DAG(
         plt.savefig('/home/santitham/airflow/dags/Fake_New_Detection/subject_distribution.png')
         
         # Generate word cloud for fake and real news
-        fake_text = ' '.join(df[df['label'] == 0]['text'])
-        real_text = ' '.join(df[df['label'] == 1]['text'])
+        fake_text = ' '.join(df[df['label'] == 0]['text'].dropna().astype(str))
+        real_text = ' '.join(df[df['label'] == 1]['text'].dropna().astype(str))
         
         fake_wordcloud = WordCloud(width=800, height=400).generate(fake_text)
         real_wordcloud = WordCloud(width=800, height=400).generate(real_text)
@@ -152,8 +152,17 @@ with DAG(
         with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'wb') as f:
             pickle.dump((model, vectorizer), f)
 
+    def install_missing_dependencies():
+        import os
+        os.system("pip install wordcloud")
+
     start_task = DummyOperator(
         task_id='start'
+    )
+
+    install_dependencies = PythonOperator(
+        task_id='install_dependencies',
+        python_callable=install_missing_dependencies,
     )
     
     load_data_task = PythonOperator(
@@ -189,4 +198,4 @@ with DAG(
         task_id='end'
     )
     
-    start_task >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> train_logistic_regression_task >> end_task
+    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> train_logistic_regression_task >> end_task
