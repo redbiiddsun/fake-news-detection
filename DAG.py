@@ -18,6 +18,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import pickle
 import mlflow
+from sklearn.ensemble import RandomForestClassifier
 
 # Default DAG arguments
 default_args = {
@@ -151,6 +152,29 @@ with DAG(
         # บันทึกโมเดล
         with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'wb') as f:
             pickle.dump((model, vectorizer), f)
+            
+    def train_random_forest():
+        # โหลด Train/Test Data
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/train_test_data.pkl', 'rb') as f:
+            X_train_tfidf, X_test_tfidf, y_train, y_test, vectorizer = pickle.load(f)
+
+        # เทรน Random Forest
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model.fit(X_train_tfidf, y_train)
+
+        # ทดสอบโมเดล
+        y_pred = model.predict(X_test_tfidf)
+        acc = accuracy_score(y_test, y_pred)
+
+        # ใช้ MLflow ติดตามผลลัพธ์
+        with mlflow.start_run():
+            mlflow.log_param("model", "Random Forest")
+            mlflow.log_param("n_estimators", 100)
+            mlflow.log_metric("accuracy", acc)
+
+        # บันทึกโมเดล
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/random_forest_model.pkl', 'wb') as f:
+            pickle.dump((model, vectorizer), f)
 
     def install_missing_dependencies():
         import os
@@ -193,9 +217,14 @@ with DAG(
         task_id='train_logistic_regression',
         python_callable=train_logistic_regression,
     )
+    train_random_forest_task = PythonOperator(
+    task_id='train_random_forest',
+    python_callable=train_random_forest,
+    )
+
     
     end_task = DummyOperator(
         task_id='end'
     )
     
-    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> train_logistic_regression_task >> end_task
+    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> prepare_training_data_task >> [train_logistic_regression_task, train_random_forest_task] >> end_task
