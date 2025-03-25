@@ -37,7 +37,7 @@ jobs:
       # Initialize the Airflow database
       - name: Initialize Airflow Database
         run: |
-          export AIRFLOW_HOME=$(pwd)/airflow_home
+          source venv/bin/activate
           airflow db init
 
       # Test the DAG
