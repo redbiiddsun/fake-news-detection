@@ -20,6 +20,7 @@ import pickle
 import mlflow
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest, chi2
+import numpy as np
 
 # Default DAG arguments
 default_args = {
@@ -273,10 +274,40 @@ with DAG(
         # Save the model along with vectorizer and selector
         with open('/home/santitham/airflow/dags/Fake_New_Detection/random_forest_model.pkl', 'wb') as f:
             pickle.dump((model, vectorizer, selector), f)
+    
+    def compare_models():
+        
+        # โหลดโมเดล
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'rb') as f:
+            logistic_model, vectorizer, selector = pickle.load(f)
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/random_forest_model.pkl', 'rb') as f:
+            random_forest_model, _, _ = pickle.load(f)
+
+        # โหลด Test Data
+        with open('/home/santitham/airflow/dags/Fake_New_Detection/data/test/test.pkl', 'rb') as f:
+            X_test, y_test = pickle.load(f)
+
+        # ทำนายผล
+        y_pred_logistic = logistic_model.predict(X_test)
+        y_pred_rf = random_forest_model.predict(X_test)
+
+        # คำนวณค่าความแม่นยำ
+        acc_logistic = accuracy_score(y_test, y_pred_logistic)
+        acc_rf = accuracy_score(y_test, y_pred_rf)
+
+        print(f"Logistic Regression Accuracy: {acc_logistic:.4f}")
+        print(f"Random Forest Accuracy: {acc_rf:.4f}")
+
+        # บันทึกผลลัพธ์ลง MLflow
+        with mlflow.start_run():
+            mlflow.log_metric("test_accuracy_logistic_regression", acc_logistic)
+            mlflow.log_metric("test_accuracy_random_forest", acc_rf)
+
 
     def install_missing_dependencies():
         import os
         os.system("pip install wordcloud")
+        
 
     start_task = DummyOperator(
         task_id='start'
@@ -320,8 +351,13 @@ with DAG(
     python_callable=train_random_forest,
     )
     
+    compare_models_task = PythonOperator(
+    task_id='compare_models',
+    python_callable=compare_models,
+    )
+    
     end_task = DummyOperator(
         task_id='end'
     )
     
-    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> [train_logistic_regression_task, train_random_forest_task] >> end_task
+    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> [train_logistic_regression_task, train_random_forest_task] >> compare_models_task  >> end_task
