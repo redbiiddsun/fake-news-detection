@@ -1,0 +1,48 @@
+name: Test Airflow DAG
+
+on:
+  push:
+    branches:
+      - '**'  # This will trigger on every push to any branch
+
+jobs:
+  test_dag:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12.2'
+
+      # Step 3: Create a virtual environment
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # if you have additional dependencies
+
+      # Initialize the Airflow database
+      - name: Initialize Airflow Database
+        run: |
+          source venv/bin/activate
+          airflow db init
+
+      # Test the DAG
+      - name: Test DAG file
+        run: |
+          source venv/bin/activate
+          pytest tests/test_dag_loading.py
+          python -c "from airflow.models import DagBag; print(DagBag().get_dag('fake_news_data_cleaning'))"
