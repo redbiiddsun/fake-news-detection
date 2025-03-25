@@ -1,0 +1,32 @@
+name: Test Airflow DAG
+
+on:
+  push:
+    branches:
+      - '**'  # This will trigger on every push to any branch
+
+jobs:
+  test_dag:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # if you have additional dependencies
+
+      # Test the DAG
+      - name: Test DAG file
+        run: |
+          python -c "from airflow.models import DagBag; dagbag = DagBag(dag_folder='dags/DAG.py'); print(dagbag.import_errors)"
