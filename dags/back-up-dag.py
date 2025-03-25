@@ -1,6 +1,10 @@
+import os
+os.system("pip install wordcloud")
+os.system("pip install mlflow")
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.empty import EmptyOperator
+from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime
 import pandas as pd
 import re
@@ -305,7 +309,7 @@ with DAG(
         os.system("pip install wordcloud")
         
 
-    start_task = EmptyOperator(
+    start_task = DummyOperator(
         task_id='start'
     )
 
@@ -352,7 +356,7 @@ with DAG(
     python_callable=compare_models,
     )
     
-    end_task = EmptyOperator(
+    end_task = DummyOperator(
         task_id='end'
     )
     
