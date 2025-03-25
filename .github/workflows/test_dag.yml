@@ -38,4 +38,4 @@ jobs:
       - name: Test DAG file
         run: |
           source venv/bin/activate
-          python -c "from airflow.models import DagBag; dagbag = DagBag(dag_folder='dags/DAG.py'); print(dagbag.import_errors)"
+          pytest tests/test_dag_loading.py
