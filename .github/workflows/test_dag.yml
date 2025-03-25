@@ -20,13 +20,22 @@ jobs:
         with:
           python-version: '3.12.2'
 
+      # Step 3: Create a virtual environment
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
       # Install dependencies
       - name: Install dependencies
         run: |
+          source venv/bin/activate
+          python -m pip install --upgrade pip
           python -m pip install --upgrade pip
           pip install -r requirements.txt  # if you have additional dependencies
 
       # Test the DAG
       - name: Test DAG file
         run: |
+          source venv/bin/activate
           python -c "from airflow.models import DagBag; dagbag = DagBag(dag_folder='dags/DAG.py'); print(dagbag.import_errors)"
