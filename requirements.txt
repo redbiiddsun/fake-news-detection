@@ -74,6 +74,7 @@ httpx==0.28.1
 idna==3.10
 importlib_metadata==8.6.1
 inflection==0.5.1
+iniconfig==2.1.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 jmespath==1.0.1
@@ -129,6 +130,7 @@ pydantic_core==2.27.2
 Pygments==2.19.1
 PyJWT==2.10.1
 pyparsing==3.2.3
+pytest==8.3.5
 python-daemon==3.1.2
 python-dateutil==2.9.0.post0
 python-nvd3==0.16.0
