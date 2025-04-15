@@ -201,108 +201,7 @@ with DAG(
         # Save vectorizer and selector
         with open('/home/santitham/airflow/dags/Fake_New_Detection/vectorizer_selector.pkl', 'wb') as f:
             pickle.dump((vectorizer, selector), f)
-
-    def train_logistic_regression():
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/data/train/train.pkl', 'rb') as f:
-            X_train, y_train = pickle.load(f)
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/data/val/val.pkl', 'rb') as f:
-            X_val, y_val = pickle.load(f)
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/vectorizer_selector.pkl', 'rb') as f:
-            vectorizer, selector = pickle.load(f)
-    
-        model = LogisticRegression(max_iter=1000)
-        model.fit(X_train, y_train)
-    
-        y_pred = model.predict(X_val)
-    
-        acc = accuracy_score(y_val, y_pred)
-        precision = precision_score(y_val, y_pred)
-        recall = recall_score(y_val, y_pred)
-        f1 = f1_score(y_val, y_pred)
-        conf_matrix = confusion_matrix(y_val, y_pred)
-    
-        cv_scores = cross_val_score(model, X_train, y_train, cv=5)
-    
-        with mlflow.start_run():
-            mlflow.log_param("model", "Logistic Regression")
-            mlflow.log_param("max_iter", 1000)
-            mlflow.log_metric("val_accuracy", acc)
-            mlflow.log_metric("val_precision", precision)
-            mlflow.log_metric("val_recall", recall)
-            mlflow.log_metric("val_f1_score", f1)
-            mlflow.log_metric("cv_mean_accuracy", cv_scores.mean())
-    
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'wb') as f:
-            pickle.dump((model, vectorizer, selector), f)
-            
-    def train_random_forest():
-        # Load training and validation data
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/data/train/train.pkl', 'rb') as f:
-            X_train, y_train = pickle.load(f)
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/data/val/val.pkl', 'rb') as f:
-            X_val, y_val = pickle.load(f)
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/vectorizer_selector.pkl', 'rb') as f:
-            vectorizer, selector = pickle.load(f)
-    
-        # Initialize and train model
-        model = RandomForestClassifier(n_estimators=100, random_state=42)
-        model.fit(X_train, y_train)
-    
-        # Predict on validation set
-        y_pred = model.predict(X_val)
-    
-        # Calculate performance metrics
-        acc = accuracy_score(y_val, y_pred)
-        precision = precision_score(y_val, y_pred)
-        recall = recall_score(y_val, y_pred)
-        f1 = f1_score(y_val, y_pred)
-        conf_matrix = confusion_matrix(y_val, y_pred)
-    
-        # Cross-validation on training set
-        cv_scores = cross_val_score(model, X_train, y_train, cv=5)
-    
-        # Log to MLflow
-        with mlflow.start_run():
-            mlflow.log_param("model", "Random Forest")
-            mlflow.log_param("n_estimators", 100)
-            mlflow.log_metric("val_accuracy", acc)
-            mlflow.log_metric("val_precision", precision)
-            mlflow.log_metric("val_recall", recall)
-            mlflow.log_metric("val_f1_score", f1)
-            mlflow.log_metric("cv_mean_accuracy", cv_scores.mean())
-    
-        # Save the model along with vectorizer and selector
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/random_forest_model.pkl', 'wb') as f:
-            pickle.dump((model, vectorizer, selector), f)
-    
-    def compare_models():
-        
-        # โหลดโมเดล
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/logistic_model.pkl', 'rb') as f:
-            logistic_model, vectorizer, selector = pickle.load(f)
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/random_forest_model.pkl', 'rb') as f:
-            random_forest_model, _, _ = pickle.load(f)
-
-        # โหลด Test Data
-        with open('/home/santitham/airflow/dags/Fake_New_Detection/data/test/test.pkl', 'rb') as f:
-            X_test, y_test = pickle.load(f)
-
-        # ทำนายผล
-        y_pred_logistic = logistic_model.predict(X_test)
-        y_pred_rf = random_forest_model.predict(X_test)
-
-        # คำนวณค่าความแม่นยำ
-        acc_logistic = accuracy_score(y_test, y_pred_logistic)
-        acc_rf = accuracy_score(y_test, y_pred_rf)
-
-        print(f"Logistic Regression Accuracy: {acc_logistic:.4f}")
-        print(f"Random Forest Accuracy: {acc_rf:.4f}")
-
-        # บันทึกผลลัพธ์ลง MLflow
-        with mlflow.start_run():
-            mlflow.log_metric("test_accuracy_logistic_regression", acc_logistic)
-            mlflow.log_metric("test_accuracy_random_forest", acc_rf)
-
+ 
 
     def install_missing_dependencies():
         import os
@@ -342,22 +241,9 @@ with DAG(
     python_callable=prepare_training_data,
     )
 
-    train_logistic_regression_task = PythonOperator(
-        task_id='train_logistic_regression',
-        python_callable=train_logistic_regression,
-    )
-    train_random_forest_task = PythonOperator(
-    task_id='train_random_forest',
-    python_callable=train_random_forest,
-    )
-    
-    compare_models_task = PythonOperator(
-    task_id='compare_models',
-    python_callable=compare_models,
-    )
     
     end_task = DummyOperator(
         task_id='end'
     )
     
-    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task >> [train_logistic_regression_task, train_random_forest_task] >> compare_models_task  >> end_task
+    start_task >> install_dependencies >> load_data_task >> clean_data_task >> preprocess_data_task >> eda_task >> prepare_training_data_task  >> end_task
