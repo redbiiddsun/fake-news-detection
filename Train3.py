@@ -6,17 +6,20 @@ import os
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import MultinomialNB  # Changed from SVM to Naive Bayes
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 import numpy as np
+from xgboost import XGBClassifier
+
 
 # ✅ MLflow setup - MOVED THIS SECTION UP
 mlflow.set_tracking_uri('http://localhost:5000')
 mlflow.set_experiment("Fake News Detection 3")
 
 # ✅ Load data
-df = pd.read_csv('final_fake_news.csv')
+df = pd.read_csv('final_fake_news_v2.csv')
 
 X = df['text'].astype(str)
 y = df['label']
@@ -97,27 +100,95 @@ with mlflow.start_run(run_name="Random Forest"):
 
 print(f"Random Forest Test Accuracy: {rf_acc}")
 
-# ========== Save Best Model ==========
-if log_acc > rf_acc:
-    best_model = log_reg
-    best_model_name = "Logistic Regression"
-    best_accuracy = log_acc
-else:
-    best_model = rf_model
-    best_model_name = "Random Forest"
-    best_accuracy = rf_acc
+#========== XGBoost ==========
+xgb_model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+xgb_scores = cross_val_score(xgb_model, X_selected_trainval, y_trainval, cv=kf, scoring='accuracy')
+xgb_mean_acc = np.mean(xgb_scores)
 
-with open("best_model.pkl", "wb") as f:
-    pickle.dump(best_model, f)
-    
-# บันทึก vectorizer
+xgb_model.fit(X_selected_trainval, y_trainval)
+y_pred_xgb = xgb_model.predict(X_selected_test)
+
+xgb_precision = precision_score(y_test, y_pred_xgb)
+xgb_recall = recall_score(y_test, y_pred_xgb)
+xgb_f1 = f1_score(y_test, y_pred_xgb)
+xgb_acc = accuracy_score(y_test, y_pred_xgb)
+
+with mlflow.start_run(run_name="XGBoost"):
+    mlflow.log_param("model_type", "XGBoost")
+    mlflow.log_metric("cv_accuracy", xgb_mean_acc)
+    mlflow.log_metric("test_accuracy", xgb_acc)
+    mlflow.log_metric("precision", xgb_precision)
+    mlflow.log_metric("recall", xgb_recall)
+    mlflow.log_metric("f1_score", xgb_f1)
+    mlflow.sklearn.log_model(xgb_model, "XGBoost_Model")
+
+    with open("xgboost_model.pkl", "wb") as f:
+        pickle.dump(xgb_model, f)
+    mlflow.log_artifact("xgboost_model.pkl")
+
+print(f"XGBoost Test Accuracy: {xgb_acc}")
+
+# ========== Naive Bayes ========== 
+# Replaced SVM with Naive Bayes
+nb_model = MultinomialNB(alpha=1.0)  # alpha is the smoothing parameter
+nb_scores = cross_val_score(nb_model, X_selected_trainval, y_trainval, cv=kf, scoring='accuracy')
+nb_mean_acc = np.mean(nb_scores)
+nb_model.fit(X_selected_trainval, y_trainval)
+
+y_pred_nb = nb_model.predict(X_selected_test)
+nb_precision = precision_score(y_test, y_pred_nb)
+nb_recall = recall_score(y_test, y_pred_nb)
+nb_f1 = f1_score(y_test, y_pred_nb)
+nb_acc = accuracy_score(y_test, y_pred_nb)
+
+with mlflow.start_run(run_name="Naive Bayes"):
+    mlflow.log_param("model_type", "Naive Bayes")
+    mlflow.log_param("alpha", 1.0)
+    mlflow.log_metric("cv_accuracy", nb_mean_acc)
+    mlflow.log_metric("test_accuracy", nb_acc)
+    mlflow.log_metric("precision", nb_precision)
+    mlflow.log_metric("recall", nb_recall)
+    mlflow.log_metric("f1_score", nb_f1)
+    mlflow.sklearn.log_model(nb_model, "Naive_Bayes_Model")
+
+    with open("naive_bayes_model.pkl", "wb") as f:
+        pickle.dump(nb_model, f)
+    mlflow.log_artifact("naive_bayes_model.pkl")
+
+print(f"Naive Bayes Test Accuracy: {nb_acc}")
+
+#========== Select Best Model ==========
+# Include all models in the comparison
+accuracies = {
+    "Logistic Regression": log_acc,
+    "Random Forest": rf_acc,
+    "XGBoost": xgb_acc,
+    "Naive Bayes": nb_acc  # Changed from SVM to Naive Bayes
+}
+
+best_model_name = max(accuracies, key=accuracies.get)
+best_accuracy = accuracies[best_model_name]
+
+model_mapping = {
+    "Logistic Regression": log_reg,
+    "Random Forest": rf_model,
+    "XGBoost": xgb_model,
+    "Naive Bayes": nb_model  # Changed from SVM to Naive Bayes
+}
+best_model = model_mapping[best_model_name]
+
+# Save vectorizer and selector
 with open("vectorizer.pkl", "wb") as f:
     pickle.dump(vectorizer, f)
 
-# บันทึก selector
 with open("selector.pkl", "wb") as f:
     pickle.dump(selector, f)
 
+# Save best model
+with open("best_model.pkl", "wb") as f:
+    pickle.dump(best_model, f)
+
+# Log final comparison results
 with mlflow.start_run(run_name="Model Comparison"):
     mlflow.log_param("best_model", best_model_name)
     mlflow.log_metric("best_accuracy", best_accuracy)
