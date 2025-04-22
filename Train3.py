@@ -15,7 +15,7 @@ from xgboost import XGBClassifier
 
 
 # ✅ MLflow setup - MOVED THIS SECTION UP
-mlflow.set_tracking_uri('http://localhost:5000')
+mlflow.set_tracking_uri('http://127.0.0.1:5000')
 mlflow.set_experiment("Fake News Detection 3")
 
 # ✅ Load data
@@ -64,7 +64,7 @@ with mlflow.start_run(run_name="Logistic Regression"):
     mlflow.sklearn.log_model(log_reg, "Logistic_Regression_Model")
     
     # Only log the dataset in one of the runs
-    mlflow.log_artifact("final_fake_news.csv")
+    mlflow.log_artifact("final_fake_news_v2.csv")
 
     with open("logistic_regression_model.pkl", "wb") as f:
         pickle.dump(log_reg, f)
