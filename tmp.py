@@ -1,18 +1,20 @@
 import pickle
 import mlflow
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
 
-
-
+# โหลดโมเดลจาก MLflow
 mlflow.set_tracking_uri("http://127.0.0.1:5000") 
-
-
-import mlflow
-logged_model = 'runs:/3a4e5743e779467d82e656c738fa56cb/XGBoost_Model'
-
-# # Load model as a PyFuncModel.
+logged_model = 'runs:/89b4bc8964ee401a85f6b90f37f0b388/XGBoost_Model'
 loaded_model = mlflow.pyfunc.load_model(logged_model)
+
+# โหลด vectorizer และ selector
+with open("vectorizer.pkl", "rb") as f:
+    vectorizer = pickle.load(f)
+
+with open("selector.pkl", "rb") as f:
+    selector = pickle.load(f)
+
+# ข้อความที่ต้องการทำนาย
 text_data = [
 "WASHINGTON Reuters The head of a conservative Republican faction in the US Congress who voted this month for a huge expansion of the national debt to pay for tax cuts called himself a fiscal conservative on Sunday and urged budget restraint in 2018 In keeping with a sharp pivot under way among Republicans US Representative Mark Meadows speaking on CBS Face the Nation drew a hard line on federal spending which lawmakers are bracing to do battle over in January When they return from the holidays on Wednesday lawmakers will begin trying to pass a federal budget in a fight likely to be linked to other issues such as immigration policy even as the November congressional election campaigns approach in which Republicans will seek to keep control of Congress President Donald Trump and his Republicans want a big budget increase in military spending while Democrats also want proportional increases for nondefense discretionary spending on programs that support education scientific research infrastructure public health and environmental protection The Trump administration has already been willing to say Were going to increase nondefense discretionary spending by about 7 percent Meadows chairman of the small but influential House Freedom Caucus said on the program Now Democrats are saying thats not enough we need to give the government a pay raise of 10 to 11 percent For a fiscal conservative I dont see where the rationale is Eventually you run out of other peoples money he said Meadows was among Republicans who voted in late December for their partys debtfinanced tax overhaul which is expected to balloon the federal budget deficit and add about 15 trillion over 10 years to the 20 trillion national debt Its interesting to hear Mark talk about fiscal responsibility Democratic US Representative Joseph Crowley said on CBS Crowley said the Republican tax bill would require the United States to borrow 15 trillion to be paid off by future generations to finance tax cuts for corporations and the rich This is one of the least fiscally responsible bills weve ever seen passed in the history of the House of Representatives I think were going to be paying for this for many many years to come Crowley said Republicans insist the tax package the biggest US tax overhaul in more than 30 years will boost the economy and job growth House Speaker Paul Ryan who also supported the tax bill recently went further than Meadows making clear in a radio interview that welfare or entitlement reform as the party often calls it would be a top Republican priority in 2018 In Republican parlance entitlement programs mean food stamps housing assistance Medicare and Medicaid health insurance for the elderly poor and disabled as well as other programs created by Washington to assist the needy Democrats seized on Ryans early December remarks saying they showed Republicans would try to pay for their tax overhaul by seeking spending cuts for social programs But the goals of House Republicans may have to take a back seat to the Senate where the votes of some Democrats will be needed to approve a budget and prevent a government shutdown Democrats will use their leverage in the Senate which Republicans narrowly control to defend both discretionary nondefense programs and social spending while tackling the issue of the Dreamers people brought illegally to the country as children Trump in September put a March 2018 expiration date on the Deferred Action for Childhood Arrivals or DACA program which protects the young immigrants from deportation and provides them with work permits The president has said in recent Twitter messages he wants funding for his proposed Mexican border wall and other immigration law changes in exchange for agreeing to help the Dreamers Representative Debbie Dingell told CBS she did not favor linking that issue to other policy objectives such as wall funding We need to do DACA clean she said On Wednesday Trump aides will meet with congressional leaders to discuss those issues That will be followed by a weekend of strategy sessions for Trump and Republican leaders on Jan 6 and 7 the White House said Trump was also scheduled to meet on Sunday with Florida Republican Governor Rick Scott who wants more emergency aid The House has passed an 81 billion aid package after hurricanes in Florida Texas and Puerto Rico and wildfires in California The package far exceeded the 44 billion requested by the Trump administration The Senate has not yet voted on the aid",
 "WASHINGTON Reuters Transgender people will be allowed for the first time to enlist in the US military starting on Monday as ordered by federal courts the Pentagon said on Friday after President Donald Trumps administration decided not to appeal rulings that blocked his transgender ban Two federal appeals courts one in Washington and one in Virginia last week rejected the administrations request to put on hold orders by lower court judges requiring the military to begin accepting transgender recruits on Jan 1 A Justice Department official said the administration will not challenge those rulings The Department of Defense has announced that it will be releasing an independent study of these issues in the coming weeks So rather than litigate this interim appeal before that occurs the administration has decided to wait for DODs study and will continue to defend the presidents lawful authority in District Court in the meantime the official said speaking on condition of anonymity In September the Pentagon said it had created a panel of senior officials to study how to implement a directive by Trump to prohibit transgender individuals from serving The Defense Department has until Feb 21 to submit a plan to Trump Lawyers representing currentlyserving transgender service members and aspiring recruits said they had expected the administration to appeal the rulings to the conservativemajority Supreme Court but were hoping that would not happen Pentagon spokeswoman Heather Babb said in a statement As mandated by court order the Department of Defense is prepared to begin accessing transgender applicants for military service Jan 1 All applicants must meet all accession standards Jennifer Levi a lawyer with gay lesbian and transgender advocacy group GLAD called the decision not to appeal great news Im hoping it means the government has come to see that there is no way to justify a ban and that its not good for the military or our country Levi said Both GLAD and the American Civil Liberties Union represent plaintiffs in the lawsuits filed against the administration In a move that appealed to his hardline conservative supporters Trump announced in July that he would prohibit transgender people from serving in the military reversing Democratic President Barack Obamas policy of accepting them Trump said on Twitter at the time that the military cannot be burdened with the tremendous medical costs and disruption that transgender in the military would entail Four federal judges in Baltimore Washington DC Seattle and Riverside California have issued rulings blocking Trumps ban while legal challenges to the Republican presidents policy proceed The judges said the ban would likely violate the right under the US Constitution to equal protection under the law The Pentagon on Dec 8 issued guidelines to recruitment personnel in order to enlist transgender applicants by Jan 1 The memo outlined medical requirements and specified how the applicants sex would be identified and even which undergarments they would wear The Trump administration previously said in legal papers that the armed forces were not prepared to train thousands of personnel on the medical standards needed to process transgender applicants and might have to accept some individuals who are not medically fit for service The Obama administration had set a deadline of July 1 2017 to begin accepting transgender recruits But Trumps defense secretary James Mattis postponed that date to Jan 1 2018 which the presidents ban then put off indefinitely Trump has taken other steps aimed at rolling back transgender rights In October his administration said a federal law banning genderbased workplace discrimination does not protect transgender employees reversing another Obamaera position In February Trump rescinded guidance issued by the Obama administration saying that public schools should allow transgender students to use the restroom that corresponds to their gender identity",
@@ -24,23 +26,10 @@ text_data = [
 "WASHINGTON Reuters Alabama Secretary of State John Merrill said he will certify Democratic Senatorelect Doug Jones as winner on Thursday despite opponent Roy Moores challenge in a phone call on CNN Moore a conservative who had faced allegations of groping teenage girls when he was in his 30s filed a court challenge late on Wednesday to the outcome of a US Senate election he unexpectedly lost"
 ]
 
-# โหลด vectorizer และ selector ที่ได้เรียนรู้จากข้อมูลฝึก (X_train)
-with open("vectorizer.pkl", "rb") as f:
-    vectorizer = pickle.load(f)
-
-with open("selector.pkl", "rb") as f:
-    selector = pickle.load(f)
-
-# Step 2: Transform the input text
+# แปลงข้อความ
 X_test_tfidf = vectorizer.transform(text_data)  
+X_test_selected = selector.transform(X_test_tfidf)
 
-X_test_selected = selector.transform(X_test_tfidf)  # เลือกฟีเจอร์ที่ดีที่สุด
-
-# Step 3: Convert to DataFrame
-df_transformed = pd.DataFrame(X_test_selected.toarray(), columns=vectorizer.get_feature_names_out())
-
-# # Predict on a Pandas DataFrame.
-predictions = loaded_model.predict(df_transformed)
-
+# ทำนายโดยส่ง sparse matrix โดยตรง
+predictions = loaded_model.predict(X_test_selected)
 print(predictions)
-
