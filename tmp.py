@@ -4,7 +4,7 @@ import pandas as pd
 
 # โหลดโมเดลจาก MLflow
 mlflow.set_tracking_uri("http://127.0.0.1:5000") 
-logged_model = 'runs:/89b4bc8964ee401a85f6b90f37f0b388/XGBoost_Model'
+logged_model = 'runs:/3a4e5743e779467d82e656c738fa56cb/XGBoost_Model'
 loaded_model = mlflow.pyfunc.load_model(logged_model)
 
 # โหลด vectorizer และ selector

@@ -1,49 +1,50 @@
-from flask import Flask, request, jsonify
+from pprint import pprint
+from flask import Flask, jsonify, request
 import pickle
 import numpy as np
 import mlflow
 from mlflow.tracking import MlflowClient
-import mlflow.sklearn
 import pandas as pd
-import os
-import mlflow.xgboost
 
+
+# โหลด vectorizer และ selector
+with open("vectorizer.pkl", "rb") as f:
+    vectorizer = pickle.load(f)
+
+with open("selector.pkl", "rb") as f:
+    selector = pickle.load(f)
 
 mlflow.set_tracking_uri("http://127.0.0.1:5000") 
 
 client = MlflowClient()
 
-experiment = client.get_experiment("268375058792484634")  # Replace with your experiment ID
-    
-runs = client.search_runs(
-        experiment_ids=[experiment.experiment_id],
-        order_by=["metrics.test_accuracy DESC"],  # Sort by test_accuracy
-        max_results=1  
-)
+# experiment = client.get_experiment("268375058792484634")  # Replace with your experiment ID
 
-best_run = runs[0]
-best_run_id = best_run.info.run_id
+# runs = client.search_runs(
+#         experiment_ids=[experiment.experiment_id],
+#         order_by=["metrics.test_accuracy DESC"],  # Sort by test_accuracy
+#         max_results=1  
+# )
 
-# artifacts = client.list_artifacts(best_run_id)
-
-# artifacts_path = artifacts[0].path
-
-# # Local base path
-# base_path = os.path.join("mlruns", experiment.experiment_id, best_run_id, "artifacts")
-
-# # # For model logged with MLflow (directory)
-# xgboost_model_path = os.path.join(base_path, artifacts_path)
-
-# print(xgboost_model_path)
-
-# model = mlflow.xgboost.load_model(xgboost_model_path)
+# best_run = runs[0]
+# best_run_id = best_run.info.run_id
+# artifacts_path = client.list_artifacts(best_run_id)
 
 
+def predict_mlflow(text):
 
-model_uri = f"runs:/{best_run_id}/model"
+    logged_model = 'runs:/3a4e5743e779467d82e656c738fa56cb/XGBoost_Model'
+    loaded_model = mlflow.pyfunc.load_model(logged_model)
 
-model = mlflow.sklearn.load_model(model_uri)
+    if  not isinstance(text, list):
+        text = [text]
 
+    X_test_tfidf = vectorizer.transform(text)  
+    X_test_selected = selector.transform(X_test_tfidf)
+
+    predictions = loaded_model.predict(X_test_selected)
+
+    return predictions
 
 app = Flask(__name__)
 
@@ -57,16 +58,22 @@ def health():
         "status": "ok"
     }
 
-@app.route("/predict", methods=["GET"])
+@app.route("/predict", methods=["POST"])
 def predict():
 
-    input_text = "The Trump administration has said it is freezing more than $2bn (£1.5bn) in federal funds for Harvard University, hours after the elite college rejected a list of demands from the White House. The White House sent a list of demands to Harvard last week which it said were designed to fight antisemitism on campus. They included changes to hiring, admissions and teaching. Since Donald Trump was re-elected, his government has tried to reshape elite universities by threatening to withhold federal funds, mostly spent on research. Harvard became the first major US university to reject the administration's demands on Monday, accusing the White House of trying to control its community."
+    try:
+        body = request.get_json(force=True)
+    except Exception as e:
+        return jsonify({"error": "Invalid or missing JSON data"}), 400
 
-    input_df = pd.DataFrame({"text": [input_text]})
+    if "input" not in body:
+        return jsonify({"error": "'features' key is missing from the request"}), 400 
 
-    prediction = model.predict(input_df)
+    result = predict_mlflow(body["input"]).tolist()
 
-    return prediction
+    return {"status" : "success", "result": result}
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=9000)

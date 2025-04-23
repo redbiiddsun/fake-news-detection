@@ -171,3 +171,7 @@ cython_debug/
 .pypirc
 
 *.csv
+
+mlartifacts
+mlruns
+*.pkl
