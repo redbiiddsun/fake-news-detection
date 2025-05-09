@@ -16,7 +16,7 @@ from xgboost import XGBClassifier
 
 # ✅ MLflow setup - MOVED THIS SECTION UP
 mlflow.set_tracking_uri('http://127.0.0.1:5000')
-mlflow.set_experiment("Fake News Detection 3")
+mlflow.set_experiment("Fake News Detection 7")
 
 # ✅ Load data
 df = pd.read_csv('final_fake_news_v2.csv')
@@ -28,9 +28,13 @@ y = df['label']
 X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
 # TF-IDF
-vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+vectorizer = TfidfVectorizer(max_features=8000, ngram_range=(1, 2))
 X_tfidf_trainval = vectorizer.fit_transform(X_trainval)
 X_tfidf_test = vectorizer.transform(X_test)
+with mlflow.start_run(run_name="Feature Engineering"):
+    mlflow.log_param("vectorizer", "TF-IDF")
+    mlflow.log_param("ngram_range", vectorizer.ngram_range)
+    mlflow.log_param("max_features", vectorizer.max_features)
 
 # Feature Selection
 selector = SelectKBest(score_func=chi2, k=1000)
@@ -56,6 +60,9 @@ log_acc = accuracy_score(y_test, y_pred_log)
 with mlflow.start_run(run_name="Logistic Regression"):
     mlflow.log_param("model_type", "Logistic Regression")
     mlflow.log_param("max_iter", 1000)
+    mlflow.log_param("solver", log_reg.solver)
+    mlflow.log_param("penalty", log_reg.penalty)
+    mlflow.log_param("C", log_reg.C)
     mlflow.log_metric("cv_accuracy", log_mean_acc)
     mlflow.log_metric("test_accuracy", log_acc)
     mlflow.log_metric("precision", log_precision)
@@ -66,9 +73,9 @@ with mlflow.start_run(run_name="Logistic Regression"):
     # Only log the dataset in one of the runs
     mlflow.log_artifact("final_fake_news_v2.csv")
 
-    with open("logistic_regression_model.pkl", "wb") as f:
+    with open("logistic_regression_model_8.pkl", "wb") as f:
         pickle.dump(log_reg, f)
-    mlflow.log_artifact("logistic_regression_model.pkl")
+    mlflow.log_artifact("logistic_regression_model_8.pkl")
 
 print(f"Logistic Regression Test Accuracy: {log_acc}")
 
@@ -87,6 +94,7 @@ rf_acc = accuracy_score(y_test, y_pred_rf)
 with mlflow.start_run(run_name="Random Forest"):
     mlflow.log_param("model_type", "Random Forest")
     mlflow.log_param("n_estimators", 100)
+    mlflow.log_param("max_depth", rf_model.max_depth)
     mlflow.log_metric("cv_accuracy", rf_mean_acc)
     mlflow.log_metric("test_accuracy", rf_acc)
     mlflow.log_metric("precision", rf_precision)
@@ -94,14 +102,14 @@ with mlflow.start_run(run_name="Random Forest"):
     mlflow.log_metric("f1_score", rf_f1)
     mlflow.sklearn.log_model(rf_model, "Random_Forest_Model")
 
-    with open("random_forest_model.pkl", "wb") as f:
+    with open("random_forest_model_8.pkl", "wb") as f:
         pickle.dump(rf_model, f)
-    mlflow.log_artifact("random_forest_model.pkl")
+    mlflow.log_artifact("random_forest_model_8.pkl")
 
 print(f"Random Forest Test Accuracy: {rf_acc}")
 
 #========== XGBoost ==========
-xgb_model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+xgb_model = XGBClassifier(n_estimators=300,use_label_encoder=False, eval_metric='logloss', random_state=42)
 xgb_scores = cross_val_score(xgb_model, X_selected_trainval, y_trainval, cv=kf, scoring='accuracy')
 xgb_mean_acc = np.mean(xgb_scores)
 
@@ -115,6 +123,9 @@ xgb_acc = accuracy_score(y_test, y_pred_xgb)
 
 with mlflow.start_run(run_name="XGBoost"):
     mlflow.log_param("model_type", "XGBoost")
+    mlflow.log_param("n_estimators", 300)
+    mlflow.log_param("use_label_encoder", False)
+    mlflow.log_param("eval_metric", 'logloss')
     mlflow.log_metric("cv_accuracy", xgb_mean_acc)
     mlflow.log_metric("test_accuracy", xgb_acc)
     mlflow.log_metric("precision", xgb_precision)
@@ -122,9 +133,9 @@ with mlflow.start_run(run_name="XGBoost"):
     mlflow.log_metric("f1_score", xgb_f1)
     mlflow.sklearn.log_model(xgb_model, "XGBoost_Model")
 
-    with open("xgboost_model.pkl", "wb") as f:
+    with open("xgboost_model_8.pkl", "wb") as f:
         pickle.dump(xgb_model, f)
-    mlflow.log_artifact("xgboost_model.pkl")
+    mlflow.log_artifact("xgboost_model_8.pkl")
 
 print(f"XGBoost Test Accuracy: {xgb_acc}")
 
@@ -151,9 +162,9 @@ with mlflow.start_run(run_name="Naive Bayes"):
     mlflow.log_metric("f1_score", nb_f1)
     mlflow.sklearn.log_model(nb_model, "Naive_Bayes_Model")
 
-    with open("naive_bayes_model.pkl", "wb") as f:
+    with open("naive_bayes_model_8.pkl", "wb") as f:
         pickle.dump(nb_model, f)
-    mlflow.log_artifact("naive_bayes_model.pkl")
+    mlflow.log_artifact("naive_bayes_model_8.pkl")
 
 print(f"Naive Bayes Test Accuracy: {nb_acc}")
 
@@ -178,22 +189,22 @@ model_mapping = {
 best_model = model_mapping[best_model_name]
 
 # Save vectorizer and selector
-with open("vectorizer.pkl", "wb") as f:
+with open("vectorizer_8.pkl", "wb") as f:
     pickle.dump(vectorizer, f)
 
-with open("selector.pkl", "wb") as f:
+with open("selector_8.pkl", "wb") as f:
     pickle.dump(selector, f)
 
 # Save best model
-with open("best_model.pkl", "wb") as f:
+with open("best_model_8.pkl", "wb") as f:
     pickle.dump(best_model, f)
 
 # Log final comparison results
 with mlflow.start_run(run_name="Model Comparison"):
     mlflow.log_param("best_model", best_model_name)
     mlflow.log_metric("best_accuracy", best_accuracy)
-    mlflow.log_artifact("best_model.pkl")
-    mlflow.log_artifact("vectorizer.pkl") 
-    mlflow.log_artifact("selector.pkl")
+    mlflow.log_artifact("best_model_8.pkl")
+    mlflow.log_artifact("vectorizer_8.pkl") 
+    mlflow.log_artifact("selector_8.pkl")
 
 print(f"Best Model: {best_model_name} (Test Accuracy: {best_accuracy})")
