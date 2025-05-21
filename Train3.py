@@ -33,7 +33,7 @@ y = df['label']
 X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
 # TF-IDF
-vectorizer = TfidfVectorizer(max_features=8000, ngram_range=(1, 2))
+vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
 X_tfidf_trainval = vectorizer.fit_transform(X_trainval)
 X_tfidf_test = vectorizer.transform(X_test)
 with mlflow.start_run(run_name="Feature Engineering"):
