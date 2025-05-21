@@ -1,0 +1,12 @@
+import requests
+url = 'http://minio.paperlesstransform.online/api/v1/download-shared-object/aHR0cDovLzEyNy4wLjAuMTo5MDAwL21sb3BzL2ZpbmFsX2Zha2VfbmV3c192Mi5jc3Y_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD04WFZXRUE0QTRXUEM5RThGMzM3SSUyRjIwMjUwNTIxJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDUyMVQxNTUyMjZaJlgtQW16LUV4cGlyZXM9NDMxOTkmWC1BbXotU2VjdXJpdHktVG9rZW49ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmhZMk5sYzNOTFpYa2lPaUk0V0ZaWFJVRTBRVFJYVUVNNVJUaEdNek0zU1NJc0ltVjRjQ0k2TVRjME56ZzROVFl6TUN3aWNHRnlaVzUwSWpvaVVrOVBWRTVCVFVVaWZRLkt0MWl6c3BBNDluZkZKeVJ0YmdCMkROb2ZxbHlTa1ZMTkt2ZmhINkNvc0UwQnNzX080cFpTZENlaGt3dnV1Smk0cDBUMkk3TnI5OUpObWE4WERxLWRnJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZ2ZXJzaW9uSWQ9bnVsbCZYLUFtei1TaWduYXR1cmU9MDUzYzM0MjI2OTEwM2U2YzRjZmJjYzE0Y2ZlNGVkYzlkY2ZkOThhNTgzZGUzOTIwNGNhNTJjZTE1Njk2OWMwMQ'
+
+response = requests.get(url)
+file_Path = 'final_fake_news_v2.csv'
+
+if response.status_code == 200:
+    with open(file_Path, 'wb') as file:
+        file.write(response.content)
+    print('File downloaded successfully')
+else:
+    raise Exception(f'Failed to download file: {file_Path}')
