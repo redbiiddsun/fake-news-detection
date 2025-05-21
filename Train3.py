@@ -15,7 +15,12 @@ from xgboost import XGBClassifier
 
 
 # ✅ MLflow setup - MOVED THIS SECTION UP
-mlflow.set_tracking_uri(os.environ["MLFLOW_URL"])
+
+if(os.environ.get("ENVIRONMENT") == "PRODUCTION"):
+    mlflow.set_tracking_uri(os.environ["MLFLOW_URL"])
+else:
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
+
 mlflow.set_experiment("Fake News Detection")
 
 # ✅ Load data
