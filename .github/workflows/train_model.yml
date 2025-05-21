@@ -1,0 +1,41 @@
+
+name: Train a Model
+
+on:
+  workflow_dispatch:
+
+jobs:
+  train_model:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.12.2'
+
+      # Step 3: Create a virtual environment
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Initialize the Airflow database
+      - name: Train a Model
+        run: |
+          source venv/bin/activate
+          python Train3.py
+          
