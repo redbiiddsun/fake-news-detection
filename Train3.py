@@ -12,6 +12,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_selection import SelectKBest, chi2
 import numpy as np
 from xgboost import XGBClassifier
+from mlflow.models import ModelSignature
+from mlflow.types.schema import Schema, ColSpec
 
 
 # ✅ MLflow setup - MOVED THIS SECTION UP
@@ -78,9 +80,9 @@ with mlflow.start_run(run_name="Logistic Regression"):
     # Only log the dataset in one of the runs
     mlflow.log_artifact("final_fake_news_v2.csv")
 
-    with open("logistic_regression_model_8.pkl", "wb") as f:
+    with open("logistic_regression_model.pkl", "wb") as f:
         pickle.dump(log_reg, f)
-    mlflow.log_artifact("logistic_regression_model_8.pkl")
+    mlflow.log_artifact("logistic_regression_model.pkl")
 
 print(f"Logistic Regression Test Accuracy: {log_acc}")
 
@@ -107,9 +109,9 @@ with mlflow.start_run(run_name="Random Forest"):
     mlflow.log_metric("f1_score", rf_f1)
     mlflow.sklearn.log_model(rf_model, "Random_Forest_Model")
 
-    with open("random_forest_model_8.pkl", "wb") as f:
+    with open("random_forest_model.pkl", "wb") as f:
         pickle.dump(rf_model, f)
-    mlflow.log_artifact("random_forest_model_8.pkl")
+    mlflow.log_artifact("random_forest_model.pkl")
 
 print(f"Random Forest Test Accuracy: {rf_acc}")
 
@@ -138,9 +140,9 @@ with mlflow.start_run(run_name="XGBoost"):
     mlflow.log_metric("f1_score", xgb_f1)
     mlflow.sklearn.log_model(xgb_model, "XGBoost_Model")
 
-    with open("xgboost_model_8.pkl", "wb") as f:
+    with open("xgboost_model.pkl", "wb") as f:
         pickle.dump(xgb_model, f)
-    mlflow.log_artifact("xgboost_model_8.pkl")
+    mlflow.log_artifact("xgboost_model.pkl")
 
 print(f"XGBoost Test Accuracy: {xgb_acc}")
 
@@ -167,9 +169,9 @@ with mlflow.start_run(run_name="Naive Bayes"):
     mlflow.log_metric("f1_score", nb_f1)
     mlflow.sklearn.log_model(nb_model, "Naive_Bayes_Model")
 
-    with open("naive_bayes_model_8.pkl", "wb") as f:
+    with open("naive_bayes_model.pkl", "wb") as f:
         pickle.dump(nb_model, f)
-    mlflow.log_artifact("naive_bayes_model_8.pkl")
+    mlflow.log_artifact("naive_bayes_model.pkl")
 
 print(f"Naive Bayes Test Accuracy: {nb_acc}")
 
@@ -194,22 +196,36 @@ model_mapping = {
 best_model = model_mapping[best_model_name]
 
 # Save vectorizer and selector
-with open("vectorizer_8.pkl", "wb") as f:
+with open("vectorizer.pkl", "wb") as f:
     pickle.dump(vectorizer, f)
 
-with open("selector_8.pkl", "wb") as f:
+with open("selector.pkl", "wb") as f:
     pickle.dump(selector, f)
 
 # Save best model
-with open("best_model_8.pkl", "wb") as f:
+with open("best_model.pkl", "wb") as f:
     pickle.dump(best_model, f)
+
+# Optional: Define model signature (for schema tracking and serving)
+signature = ModelSignature(
+    inputs=Schema([ColSpec("string", "text")]),      # Assuming input is raw text
+    outputs=Schema([ColSpec("long")])                # Binary classification output
+)
 
 # Log final comparison results
 with mlflow.start_run(run_name="Model Comparison"):
     mlflow.log_param("best_model", best_model_name)
     mlflow.log_metric("best_accuracy", best_accuracy)
-    mlflow.log_artifact("best_model_8.pkl")
-    mlflow.log_artifact("vectorizer_8.pkl") 
-    mlflow.log_artifact("selector_8.pkl")
+    mlflow.log_artifact("best_model.pkl")
+    mlflow.log_artifact("vectorizer.pkl") 
+    mlflow.log_artifact("selector.pkl")
+
+    # Register the best model
+    mlflow.sklearn.log_model(
+        best_model,
+        registered_model_name="Fake_News_Detection",
+        signature=signature,
+        input_example=[X_test.iloc[0]]
+    )
 
 print(f"Best Model: {best_model_name} (Test Accuracy: {best_accuracy})")
