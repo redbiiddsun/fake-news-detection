@@ -20,11 +20,10 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: miniopassword
     volumes:
-      - ./volume:/data
+      - minio_data:/data
     command: server --address ":9001" --console-address ":9000" /data
     restart: always
 
 
 volumes:
-  volume:
-    driver: local
+  minio_data:
