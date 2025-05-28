@@ -5,10 +5,10 @@ import mlflow
 from mlflow.tracking import MlflowClient
 
 
-with open("models/vectorizer.pkl", "rb") as f:
+with open("../models/vectorizer.pkl", "rb") as f:
     vectorizer = pickle.load(f)
 
-with open("models/selector.pkl", "rb") as f:
+with open("../models/selector.pkl", "rb") as f:
     selector = pickle.load(f)
 
 mlflow.set_tracking_uri("https://mlflow.paperlesstransform.online") 
