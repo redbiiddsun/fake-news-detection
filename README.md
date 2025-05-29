@@ -73,12 +73,11 @@ or using Docker
    docker compose up -d 
     ```
 
-
-
-
 ## System Architecture
 
-
+![Fake news detection System Architecture](https://github.com/redbiiddsun/fake-news-detection/blob/image/image/AWS%20(2025)%20horizontal%20framework%20(1).png?raw=true)
 
 ## CI/CD 
+![CICD](https://github.com/redbiiddsun/fake-news-detection/blob/image/image/Gitlab%20parent-child%20pipeline.png?raw=true
+)
 
